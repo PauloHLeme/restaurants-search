@@ -1,27 +1,42 @@
 import React, { useState} from "react";
+import { useSelector } from "react-redux";
 import TextField, { Input} from '@material/react-text-field';
 import MaterialIcon from '@material/react-material-icon';
-import Slider from "react-slick";
 
 import logo from '../../assets/logo.svg'
-import restaurant from '../../assets/restaurante-fake.png'
+import restaurantDefault from '../../assets/restaurante-fake.png'
 
-import { Card, RestaurantCard } from "../../components";
-import { Container, Search, Logo, Wrapper, Map, CarouselTitle, Carousel} from "./styles";
+import { Card, RestaurantCard, Modal, Map, Loader, Skeleton } from "../../components";
+import { Container, Search, Logo, Wrapper, CarouselTitle, Carousel, ModalTitle, ModalContent} from "./styles";
 
 const Home = () =>{
 
   const settings = {
     dots: false,
-    infinite: false,
+    infinite: true,
+    autoplay: true,
     speed: 300,
     slidesToShow: 4,
     slidesToScroll: 3,
     adaptiveHeight: true,
     arrows:false,
   }
-  const [inputValue, setInputValue] = useState()
+  const [inputValue, setInputValue] = useState('')
+  const [query, setQuery] = useState(null)
+  const [placeId, setPlaceId] = useState(null)
+  const [modalOpened, setModalOpened] = useState(false)
+  const { restaurants, restaurantSelected } = useSelector((state) => state.restaurants)
 
+  function handleKeyPress(e) {
+    if(e.key === 'Enter') {
+      setQuery(inputValue)
+    }
+  }
+
+  function handleOpenModal(placeId) {
+    setPlaceId(placeId)
+    setModalOpened(true)
+  }
 
   return(
     <Wrapper>
@@ -35,27 +50,61 @@ const Home = () =>{
           >
             <Input
              value={inputValue}
+             onKeyPress={handleKeyPress}
              onChange={(e) => setInputValue(e.target.value)}
             />
           </TextField>
-          <CarouselTitle>
-            Na sua Área
-          </CarouselTitle>
-          <Carousel {...settings}>
-            <Card photo={restaurant} title='restaurante do zé'/>
-            <Card photo={restaurant} title='Food now'/>
-            <Card photo={restaurant} title='Olá fome'/>
-            <Card photo={restaurant} title='Come Come'/>
-            <Card photo={restaurant} title='Oba'/>
-            <Card photo={restaurant} title='lorem ipsum'/>
-            <Card photo={restaurant} title='cacilds ipsum'/>
-            <Card photo={restaurant} title='Casa do Bacon'/>
-            <Card photo={restaurant} title='Delícia!'/>
-          </Carousel>
+          {restaurants.length > 0 ? (
+            <>
+              <CarouselTitle>
+                Na sua Área
+              </CarouselTitle>
+              <Carousel {...settings}>
+                {restaurants.map((restaurant) => (
+                  <Card
+                    key={restaurants.place_id}
+                    photo={restaurant.photos ? restaurant.photos[0].getUrl() : restaurantDefault}
+                    title={restaurant.name}
+                  />
+                ))}
+              </Carousel>
+            </>
+          ) : (
+            <Loader />
+          )}
         </Search>
-        <RestaurantCard />
+        {restaurants.map((restaurant) => (
+            <RestaurantCard
+              onClick={() => handleOpenModal(restaurant.place_id)}
+              restaurant={restaurant}
+            />
+          )
+        )}
       </Container>
-      <Map />
+      <Map
+        query={query}
+        placeId={placeId}
+      />
+      <Modal
+        open={modalOpened}
+        onClose={() => setModalOpened(!modalOpened)}
+      >
+        {restaurantSelected ? (
+          <>
+            <ModalTitle>{restaurantSelected?.name}</ModalTitle>
+            <ModalContent>{restaurantSelected?.formatted_phone_number}</ModalContent>
+            <ModalContent>{restaurantSelected?.formatted_address}</ModalContent>
+            <ModalContent>{restaurantSelected?.opening_hours?.isOpen() ? 'Aberto Agora' : 'Fechado neste momento'}</ModalContent>
+          </>
+        ) : (
+          <>
+            <Skeleton width='10px' height='10px' />
+            <Skeleton width='10px' height='10px' />
+            <Skeleton width='10px' height='10px' />
+            <Skeleton width='10px' height='10px' />
+          </>
+        )}
+      </Modal>
     </Wrapper>
   )
 }
